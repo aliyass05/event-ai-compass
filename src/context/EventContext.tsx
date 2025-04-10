@@ -14,6 +14,7 @@ export type Event = {
   capacity: number;
   registered: number;
   tags: string[];
+  hasLivestream: boolean;
 };
 
 export type Review = {
@@ -26,15 +27,21 @@ export type Review = {
   date: string;
 };
 
+export type ReservationType = {
+  eventId: string;
+  isLivestream: boolean;
+};
+
 type EventContextType = {
   events: Event[];
   reviews: Review[];
-  userReservations: string[];
+  userReservations: ReservationType[];
   getEventById: (id: string) => Event | undefined;
   getEventReviews: (eventId: string) => Review[];
-  reserveEvent: (eventId: string) => void;
+  reserveEvent: (eventId: string, isLivestream: boolean) => void;
   cancelReservation: (eventId: string) => void;
   isEventReserved: (eventId: string) => boolean;
+  getReservationType: (eventId: string) => boolean;
   addReview: (review: Omit<Review, "id" | "date">) => void;
 };
 
@@ -53,7 +60,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1677329661406-7d151f3609de?q=80&w=1632&auto=format&fit=crop",
     capacity: 50,
     registered: 32,
-    tags: ["AI", "Computer Science", "Workshop"]
+    tags: ["AI", "Computer Science", "Workshop"],
+    hasLivestream: true
   },
   {
     id: "2",
@@ -66,7 +74,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1520333789090-1afc82db536a?q=80&w=1471&auto=format&fit=crop",
     capacity: 100,
     registered: 45,
-    tags: ["Ethics", "Business", "Seminar"]
+    tags: ["Ethics", "Business", "Seminar"],
+    hasLivestream: true
   },
   {
     id: "3",
@@ -79,7 +88,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1594739790611-20ff2727462a?q=80&w=1470&auto=format&fit=crop",
     capacity: 30,
     registered: 18,
-    tags: ["Mathematics", "Calculus", "Workshop"]
+    tags: ["Mathematics", "Calculus", "Workshop"],
+    hasLivestream: false
   },
   {
     id: "4",
@@ -92,7 +102,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1584473457406-6240486418e9?q=80&w=1470&auto=format&fit=crop",
     capacity: 80,
     registered: 52,
-    tags: ["Psychology", "Research", "Presentation"]
+    tags: ["Psychology", "Research", "Presentation"],
+    hasLivestream: true
   },
   {
     id: "5",
@@ -105,7 +116,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1374&auto=format&fit=crop",
     capacity: 20,
     registered: 15,
-    tags: ["Environmental Science", "Field Trip", "Research"]
+    tags: ["Environmental Science", "Field Trip", "Research"],
+    hasLivestream: false
   },
   {
     id: "6",
@@ -118,7 +130,8 @@ const sampleEvents: Event[] = [
     image: "https://images.unsplash.com/photo-1592496431922-40349e911f74?q=80&w=1612&auto=format&fit=crop",
     capacity: 25,
     registered: 12,
-    tags: ["Literature", "English", "Workshop"]
+    tags: ["Literature", "English", "Workshop"],
+    hasLivestream: true
   }
 ];
 
@@ -165,7 +178,7 @@ const sampleReviews: Review[] = [
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [events, setEvents] = useState<Event[]>(sampleEvents);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
-  const [userReservations, setUserReservations] = useState<string[]>([]);
+  const [userReservations, setUserReservations] = useState<ReservationType[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -184,9 +197,12 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return reviews.filter(review => review.eventId === eventId);
   };
 
-  const reserveEvent = (eventId: string) => {
-    if (!userReservations.includes(eventId)) {
-      const updatedReservations = [...userReservations, eventId];
+  const reserveEvent = (eventId: string, isLivestream: boolean) => {
+    const eventExists = userReservations.some(reservation => reservation.eventId === eventId);
+    
+    if (!eventExists) {
+      const newReservation = { eventId, isLivestream };
+      const updatedReservations = [...userReservations, newReservation];
       setUserReservations(updatedReservations);
       localStorage.setItem("userReservations", JSON.stringify(updatedReservations));
       
@@ -199,14 +215,16 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       toast({
         title: "Event reserved",
-        description: "You have successfully reserved a spot for this event.",
+        description: `You have successfully reserved a spot for this event${isLivestream ? ' via livestream' : ' in person'}.`,
       });
     }
   };
 
   const cancelReservation = (eventId: string) => {
-    if (userReservations.includes(eventId)) {
-      const updatedReservations = userReservations.filter(id => id !== eventId);
+    const reservationExists = userReservations.some(reservation => reservation.eventId === eventId);
+    
+    if (reservationExists) {
+      const updatedReservations = userReservations.filter(reservation => reservation.eventId !== eventId);
       setUserReservations(updatedReservations);
       localStorage.setItem("userReservations", JSON.stringify(updatedReservations));
       
@@ -225,7 +243,12 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const isEventReserved = (eventId: string) => {
-    return userReservations.includes(eventId);
+    return userReservations.some(reservation => reservation.eventId === eventId);
+  };
+
+  const getReservationType = (eventId: string) => {
+    const reservation = userReservations.find(reservation => reservation.eventId === eventId);
+    return reservation ? reservation.isLivestream : false;
   };
 
   const addReview = (reviewData: Omit<Review, "id" | "date">) => {
@@ -253,6 +276,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         reserveEvent,
         cancelReservation,
         isEventReserved,
+        getReservationType,
         addReview
       }}
     >

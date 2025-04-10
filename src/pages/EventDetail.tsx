@@ -7,16 +7,18 @@ import { useEvents } from "@/context/EventContext";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Clock, MapPin, Users, ArrowLeft } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, Users, ArrowLeft, Tv } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewList from "@/components/ReviewList";
 
 const EventDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getEventById, getEventReviews, reserveEvent, cancelReservation, isEventReserved } = useEvents();
+  const { getEventById, getEventReviews, reserveEvent, cancelReservation, isEventReserved, getReservationType } = useEvents();
   const { isAuthenticated } = useAuth();
   const [refreshReviews, setRefreshReviews] = useState(0);
+  const [isLivestreamSelected, setIsLivestreamSelected] = useState(false);
   
   const event = id ? getEventById(id) : undefined;
   const reviews = id ? getEventReviews(id) : [];
@@ -26,6 +28,12 @@ const EventDetail = () => {
       navigate("/events");
     }
   }, [event, navigate]);
+  
+  useEffect(() => {
+    if (event && isEventReserved(event.id)) {
+      setIsLivestreamSelected(getReservationType(event.id));
+    }
+  }, [event, getReservationType, isEventReserved]);
   
   if (!event) {
     return null;
@@ -49,7 +57,7 @@ const EventDetail = () => {
     if (isReserved) {
       cancelReservation(event.id);
     } else {
-      reserveEvent(event.id);
+      reserveEvent(event.id, isLivestreamSelected);
     }
   };
   
@@ -89,6 +97,12 @@ const EventDetail = () => {
                   {event.tags.map(tag => (
                     <Badge key={tag} variant="secondary">{tag}</Badge>
                   ))}
+                  {event.hasLivestream && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Tv className="h-3 w-3" />
+                      Livestream Available
+                    </Badge>
+                  )}
                 </div>
                 
                 <h1 className="text-3xl font-bold mb-2">{event.title}</h1>
@@ -138,6 +152,26 @@ const EventDetail = () => {
                       <li>Hands-on activities and interactive discussions</li>
                       <li>Certificate of participation</li>
                     </ul>
+                    
+                    {event.hasLivestream && (
+                      <>
+                        <h3 className="text-xl font-semibold mt-6 mb-3">Livestream Information</h3>
+                        <p>
+                          This event offers a livestream option for remote participants. 
+                          If you choose to attend via livestream, you will receive a link to join the live broadcast 
+                          24 hours before the event starts.
+                        </p>
+                        <p>
+                          The livestream includes:
+                        </p>
+                        <ul>
+                          <li>Live HD video of all presentations</li>
+                          <li>Access to Q&A sessions</li>
+                          <li>Digital copies of all materials</li>
+                          <li>30-day access to the recorded session after the event</li>
+                        </ul>
+                      </>
+                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="reviews" className="pt-4">
@@ -185,6 +219,19 @@ const EventDetail = () => {
                     </div>
                   </div>
                   
+                  {!isReserved && event.hasLivestream && (
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <Tv className="h-4 w-4" />
+                        <span>Attend via livestream</span>
+                      </div>
+                      <Switch 
+                        checked={isLivestreamSelected}
+                        onCheckedChange={setIsLivestreamSelected}
+                      />
+                    </div>
+                  )}
+                  
                   <Button
                     className="w-full"
                     variant={isReserved ? "outline" : "default"}
@@ -195,8 +242,20 @@ const EventDetail = () => {
                       ? "Cancel Reservation" 
                       : event.registered >= event.capacity 
                         ? "Fully Booked" 
-                        : "Reserve Your Spot"}
+                        : isLivestreamSelected 
+                          ? "Reserve Livestream Access" 
+                          : "Reserve Your Spot"}
                   </Button>
+                  
+                  {isReserved && (
+                    <div className="p-3 bg-secondary rounded-md text-sm">
+                      <p className="font-medium">
+                        {getReservationType(event.id) 
+                          ? "You are registered to attend via livestream" 
+                          : "You are registered to attend in person"}
+                      </p>
+                    </div>
+                  )}
                   
                   {!isAuthenticated && (
                     <p className="text-xs text-center text-muted-foreground">

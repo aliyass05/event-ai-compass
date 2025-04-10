@@ -4,14 +4,15 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Clock, MapPin } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, Tv } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Event } from "@/context/EventContext";
 
 interface EventCardProps {
   event: Event;
   isReserved?: boolean;
-  onReserve?: () => void;
+  isLivestream?: boolean;
+  onReserve?: (isLivestream: boolean) => void;
   onCancel?: () => void;
   showActions?: boolean;
   className?: string;
@@ -20,6 +21,7 @@ interface EventCardProps {
 const EventCard: React.FC<EventCardProps> = ({
   event,
   isReserved = false,
+  isLivestream = false,
   onReserve,
   onCancel,
   showActions = true,
@@ -52,6 +54,12 @@ const EventCard: React.FC<EventCardProps> = ({
         <Badge className="absolute top-4 right-4 bg-primary/90">
           {event.category}
         </Badge>
+        {event.hasLivestream && (
+          <Badge className="absolute top-4 left-4 bg-secondary text-primary">
+            <Tv className="h-3 w-3 mr-1" />
+            Livestream Available
+          </Badge>
+        )}
       </div>
       
       <CardContent className="flex-grow py-4">
@@ -76,6 +84,19 @@ const EventCard: React.FC<EventCardProps> = ({
           </div>
         </div>
         
+        {isReserved && (
+          <Badge variant={isLivestream ? "outline" : "default"} className="mt-3">
+            {isLivestream ? (
+              <>
+                <Tv className="h-3 w-3 mr-1" />
+                Attending via Livestream
+              </>
+            ) : (
+              "Attending In Person"
+            )}
+          </Badge>
+        )}
+        
         <div className="mt-4 w-full bg-muted rounded-full h-1.5">
           <div
             className="bg-primary h-1.5 rounded-full"
@@ -97,14 +118,30 @@ const EventCard: React.FC<EventCardProps> = ({
             >
               Cancel Reservation
             </Button>
-          ) : (
-            <Button 
-              className="w-full" 
-              onClick={onReserve}
-              disabled={event.registered >= event.capacity}
-            >
-              {event.registered >= event.capacity ? "Fully Booked" : "Reserve Spot"}
+          ) : event.registered >= event.capacity ? (
+            <Button className="w-full" disabled>
+              Fully Booked
             </Button>
+          ) : (
+            <div className="w-full space-y-2">
+              <Button 
+                className="w-full" 
+                onClick={() => onReserve && onReserve(false)}
+              >
+                Reserve In Person
+              </Button>
+              
+              {event.hasLivestream && (
+                <Button 
+                  variant="outline"
+                  className="w-full" 
+                  onClick={() => onReserve && onReserve(true)}
+                >
+                  <Tv className="h-4 w-4 mr-2" />
+                  Join via Livestream
+                </Button>
+              )}
+            </div>
           )}
         </CardFooter>
       )}
