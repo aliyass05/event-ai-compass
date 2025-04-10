@@ -12,13 +12,14 @@ import { useEvents } from "@/context/EventContext";
 import { useAuth } from "@/context/AuthContext";
 import { Lightbulb, Sparkles, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "react-toastify";
+import { useToast } from "@/hooks/use-toast";
 
 const RecommendedEvents = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { events, reserveEvent, cancelReservation, isEventReserved } = useEvents();
   const { transcript, recommendations, isProcessing, getRecommendations, modifyRecommendations } = useAI();
+  const { toast } = useToast();
   
   const [modifyPrompt, setModifyPrompt] = useState("");
   
@@ -41,11 +42,11 @@ const RecommendedEvents = () => {
     }
   };
   
-  const handleEventAction = (eventId: string) => {
+  const handleEventAction = (eventId: string, isLivestream: boolean = false) => {
     if (isEventReserved(eventId)) {
       cancelReservation(eventId);
     } else {
-      reserveEvent(eventId);
+      reserveEvent(eventId, isLivestream);
     }
   };
   
@@ -102,11 +103,12 @@ const RecommendedEvents = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {recommendedEvents.map(({ event, score, reason }) => (
-                      <div key={event.id} className="space-y-2">
+                      <div key={event.id} className="space-y-4 mb-6">
                         <EventCard
                           event={event}
                           isReserved={isEventReserved(event.id)}
-                          onReserve={() => handleEventAction(event.id)}
+                          isLivestream={isEventReserved(event.id) ? useEvents().getReservationType(event.id) : false}
+                          onReserve={(isLivestream) => handleEventAction(event.id, isLivestream)}
                           onCancel={() => handleEventAction(event.id)}
                         />
                         <div className="px-4">

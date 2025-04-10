@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import EventCard from "@/components/EventCard";
 import { Event } from "@/context/EventContext";
@@ -17,7 +18,11 @@ const EventsPage: React.FC = () => {
         const data = await response.json();
         setEvents(data);
       } catch (error) {
-        toast.error("Failed to load events", {});
+        toast({
+          variant: "destructive",
+          title: "Failed to load events",
+          description: "There was an error loading the events. Please try again later."
+        });
       }
     };
 
