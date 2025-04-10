@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -13,6 +12,7 @@ import { useEvents } from "@/context/EventContext";
 import { useAuth } from "@/context/AuthContext";
 import { Lightbulb, Sparkles, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "react-toastify";
 
 const RecommendedEvents = () => {
   const navigate = useNavigate();
@@ -49,14 +49,13 @@ const RecommendedEvents = () => {
     }
   };
   
-  // Get the actual event objects for the recommendations
   const recommendedEvents = recommendations
     .map(rec => ({
       event: events.find(e => e.id === rec.eventId),
       score: rec.score,
       reason: rec.reason
     }))
-    .filter(item => item.event !== undefined) // Filter out any undefined events
+    .filter(item => item.event !== undefined)
     .map(item => ({
       event: item.event!,
       score: item.score,
